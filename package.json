@@ -1,0 +1,66 @@
+{
+  "name": "data-viz",
+  "private": true,
+  "description": "Collection of good to use data viz",
+  "version": "0.1.0",
+  "author": "Ayush Sharma <ayush.sharma1505@gmail.com>",
+  "dependencies": {
+    "dotenv": "^7.0.0",
+    "gatsby": "^2.5.0",
+    "gatsby-image": "^2.0.41",
+    "gatsby-plugin-google-analytics": "^2.0.9",
+    "gatsby-plugin-manifest": "^2.1.1",
+    "gatsby-plugin-offline": "^2.1.0",
+    "gatsby-plugin-react-helmet": "^3.0.12",
+    "gatsby-plugin-sass": "^2.0.4",
+    "gatsby-plugin-sharp": "^2.0.37",
+    "gatsby-plugin-typescript": "^2.0.0",
+    "gatsby-source-filesystem": "^2.0.35",
+    "gatsby-transformer-sharp": "^2.1.19",
+    "node-sass": "^4.10.0",
+    "prop-types": "^15.7.2",
+    "react": "^16.8.6",
+    "react-dom": "^16.8.6",
+    "react-helmet": "^5.2.1",
+    "react-typography": "^0.16.18"
+  },
+  "devDependencies": {
+    "@types/node": "^11.10.0",
+    "@types/react": "^16.4.14",
+    "@types/react-dom": "^16.0.7",
+    "@types/react-helmet": "^5.0.7",
+    "awesome-typescript-loader": "^5.2.1",
+    "prettier": "^1.17.1",
+    "source-map-loader": "^0.2.4",
+    "stylelint": "10.0.0",
+    "stylelint-config-recommended-scss": "3.2.0",
+    "stylelint-scss": "3.5.4",
+    "tslint": "^5.9.1",
+    "tslint-config-prettier": "^1.10.0",
+    "tslint-config-standard": "^8.0.1",
+    "typescript": "^3.1.3"
+  },
+  "keywords": [
+    "gatsby",
+    "data visualization",
+    "d3",
+    "plotly",
+    "react",
+    "typescript"
+  ],
+  "license": "MIT",
+  "scripts": {
+    "build": "gatsby build",
+    "develop": "gatsby develop",
+    "format": "prettier --write src/**/*.{js,jsx}",
+    "start": "yarn run develop",
+    "serve": "gatsby serve"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ayu15/data-viz"
+  },
+  "bugs": {
+    "url": "https://github.com/ayu15/data-viz"
+  }
+}
