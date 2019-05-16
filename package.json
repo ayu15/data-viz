@@ -5,6 +5,7 @@
   "version": "0.1.0",
   "author": "Ayush Sharma <ayush.sharma1505@gmail.com>",
   "dependencies": {
+    "d3": "^5.9.2",
     "dotenv": "^7.0.0",
     "gatsby": "^2.5.0",
     "gatsby-image": "^2.0.41",
@@ -26,7 +27,7 @@
   },
   "devDependencies": {
     "@types/node": "^11.10.0",
-    "@types/react": "^16.4.14",
+    "@types/react": "^16.8.17",
     "@types/react-dom": "^16.0.7",
     "@types/react-helmet": "^5.0.7",
     "awesome-typescript-loader": "^5.2.1",
@@ -52,7 +53,7 @@
   "scripts": {
     "build": "gatsby build",
     "develop": "gatsby develop",
-    "format": "prettier --write src/**/*.{js,jsx}",
+    "format": "prettier --write src/**/*.{js,jsx,ts,tsx}",
     "start": "yarn run develop",
     "serve": "gatsby serve"
   },
