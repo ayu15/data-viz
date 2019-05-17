@@ -6,9 +6,9 @@ import SEO from '../components/seo'
 import * as d3 from 'd3'
 
 const C2 = () => {
-  React.useEffect(() => renderMyChart())
+  React.useEffect(() => renderMyChart(), [])
   const renderMyChart = () => {
-    const data = [3, 5, 8, 7, 2, 9, 2, 10, 4, 9, 3]
+    const data = [3, 5, 7, 9, 8, 7, 2, 9, 2, 10, 4, 9, 3]
     const height = 500
     const width = 200
     const barWidth = width / data.length
