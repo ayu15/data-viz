@@ -8,22 +8,33 @@ import * as topojson from '../../dataset/topojson.min'
 // @ts-ignore
 import customData from '../../dataset/custom.topo.json'
 
-const Chart9 = () => {
-  let svg, path, projection, choroplethEnabled
-  const geojson = topojson.feature(customData, customData.objects['custom.geo'])
+const Chart10 = () => {
+  let svg, path, projection, choroplethEnabled, currentlySelectedCountry, countryGroup, cityGroup
+  let geojson = topojson.feature(customData, customData.objects['custom.geo'])
   const margin = {
     top: 50,
     right: 50,
     bottom: 50,
     left: 50,
   }
-  const width = 900 - margin.left - margin.right
-  const height = 600 - margin.top - margin.bottom
+
+  let chartHeight, chartWidth
+  const defaultScale = 1
+  const defaultTranslate = [0, 0]
   const tooltip = d3
     .select('body')
     .append('div')
     .attr('class', 'tooltip')
     .style('opacity', 0)
+
+  let scale = defaultScale
+  let translate = defaultTranslate
+
+  const listener = d3.drag()
+  listener.on('drag', () => {
+    translate = [translate[0] + d3.event.dx, translate[1] + d3.event.dy]
+    svg.attr('transform', 'translate(' + translate + ')scale(' + scale + ')')
+  })
 
   const moveTooltip = (x, y, country) => {
     tooltip
@@ -34,7 +45,7 @@ const Chart9 = () => {
       `
       )
       .style('left', x + 0 + 'px')
-      .style('top', y + height / 2 + 'px')
+      .style('top', y + chartHeight / 2 + 'px')
       .transition()
       .duration(200)
       .style('opacity', 1)
@@ -76,29 +87,120 @@ const Chart9 = () => {
     return scale
   }
 
-  const cityLabel = (city, i) => {
-    return `label_${city.city}_${i}`
+  const transformCoordinates = ([x, y]) => {
+    return [scale * x + translate[0], scale * y + translate[1]]
+  }
+
+  const denormalizeCities = cities => {
+    const cityMap = {}
+    cities.forEach(city => {
+      if (!cityMap[city.iso3]) {
+        cityMap[city.iso3] = [city]
+        return
+      }
+      cityMap[city.iso3].push(city)
+    })
+
+    Object.keys(cityMap).forEach(country => {
+      cityMap[country] = cityMap[country].sort((c1, c2) => Number(c1.population) < Number(c2.population)).slice(0, 5)
+    })
+    return cityMap
+  }
+
+  const attachCities = (topology, cities) => {
+    const cityMap = denormalizeCities(cities)
+    topology.objects['custom.geo'].geometries.forEach(country => {
+      country.properties.cities = cityMap[country.properties.iso_a3] || []
+    })
+    return topology
+  }
+
+  const getTransformation = country => {
+    if (currentlySelectedCountry === country.properties.iso_a3) {
+      return { newScale: defaultScale, newTranslate: defaultTranslate }
+    }
+    const path = d3.geoPath().projection(projection)
+    const bounds = path.bounds(country)
+    const newWidth = bounds[1][0] - bounds[0][0]
+    const newHeight = bounds[1][1] - bounds[0][1]
+    const centerX = (bounds[0][0] + bounds[1][0]) / 2
+    const centerY = (bounds[0][1] + bounds[1][1]) / 2
+    const newScale = 0.8 / Math.max(newWidth / chartWidth, newHeight / chartHeight)
+    const newTranslate = [chartWidth / 2 - newScale * centerX, chartHeight / 2 - newScale * centerY]
+    return { newScale, newTranslate }
+  }
+
+  const zoomToCountry = country => {
+    const { newScale, newTranslate } = getTransformation(country)
+    scale = newScale
+    translate = newTranslate
+    svg
+      .transition()
+      .duration(750)
+      .on('start', () => {
+        cityGroup.selectAll('circle').remove()
+        cityGroup.selectAll('text').remove()
+      })
+      .on('end', () => {
+        if (currentlySelectedCountry !== country.properties.iso_a3) {
+          drawCitiesForCountry(country)
+          currentlySelectedCountry = country.properties.iso_a3
+          return
+        }
+        currentlySelectedCountry = null
+      })
+      .attr('transform', 'translate(' + newTranslate + ')scale(' + newScale + ')')
+  }
+
+  const drawCitiesForCountry = country => {
+    cityGroup
+      .selectAll('circle')
+      .data(country.properties.cities)
+      .enter()
+      .append('circle')
+      .attr('r', '2')
+      .attr('cx', city => projection([city.lng, city.lat])[0])
+      .attr('cy', city => projection([city.lng, city.lat])[1])
+
+    const textSize = 5
+    cityGroup
+      .selectAll('text')
+      .data(country.properties.cities)
+      .enter()
+      .append('text')
+      .attr('x', city => projection([city.lng, city.lat])[0])
+      .attr('y', city => projection([city.lng, city.lat])[1])
+      .attr('font-size', textSize + 'px')
+      .attr('transform', `translate(3, ${textSize / 2})`)
+      .text(city => city.city)
   }
 
   React.useEffect(() => renderMyChart(), [])
   const renderMyChart = () => {
-    const setMapBase = () => {
+    const setMapBase = topology => {
+      const { height, width } = document.getElementById('map-container').getBoundingClientRect()
+      console.log('height width of bouding client is', height, width)
+      chartHeight = height
+      chartWidth = width
+      geojson = topojson.feature(topology, topology.objects['custom.geo'])
       svg = d3
-        .select('body')
+        .select('#map-container')
         .append('svg')
         .attr('id', 'map')
-        .attr('width', width + margin.left + margin.right)
-        .attr('height', height + margin.top + margin.bottom)
+        .attr('width', chartWidth + margin.left + margin.right)
+        .attr('height', chartHeight + margin.top + margin.bottom)
         .append('g')
         .attr('transform', `translate(${margin.left}, ${margin.top})`)
       projection = d3.geoAlbers()
       path = d3.geoPath().projection(projection)
       projection.rotate(-75).fitExtent([[0, 0], [width, height]], geojson)
+      svg.call(listener)
+      countryGroup = svg.append('g')
+      cityGroup = svg.append('g')
     }
 
     const drawCountries = () => {
-      const countryGroup = svg
-        .append('g')
+      const country = countryGroup
         .selectAll('path')
         .data(geojson.features)
         .enter()
@@ -112,7 +214,7 @@ const Chart9 = () => {
               .transition()
               .attr('fill', 'darkgrey')
           }
-          const [x, y] = path.centroid(d)
+          const [x, y] = transformCoordinates(path.centroid(d))
           moveTooltip(x, y, d)
           d3.select(`#city_${d.properties.iso_a3}`).style('opacity', 1)
         })
@@ -125,39 +227,8 @@ const Chart9 = () => {
           removeTooltip()
           d3.select(`#city_${d.properties.iso_a3}`).style('opacity', 0)
         })
-      return countryGroup
-    }
-
-    const drawCapitals = capitals => {
-      const circleRadius = 5
-      const capitalGroup = svg.append('g')
-      const capitalGroups = capitalGroup
-        .selectAll('circle')
-        .data(capitals)
-        .enter()
-        .append('g')
-        .attr('id', city => 'city_' + city.iso3)
-        .attr('class', '')
-        .style('opacity', 0)
-
-      capitalGroups
-        .append('circle')
-        .attr('cx', city => projection([city.lng, city.lat])[0])
-        .attr('cy', city => projection([city.lng, city.lat])[1])
-        .attr('r', circleRadius + 'px')
-        .attr('fill', 'tomato')
-
-      const textSize = 10
-
-      capitalGroups
-        .append('text')
-        .attr('x', city => projection([city.lng, city.lat])[0])
-        .attr('y', city => projection([city.lng, city.lat])[1])
-        .attr('font-size', textSize + 'px')
-        .attr('transform', `translate(7, ${textSize / 2})`)
-        .text(city => city.city)
-
-      return capitalGroup
+        .on('click', zoomToCountry)
+      return country
     }
 
     const drawLegend = () => {
@@ -260,35 +331,10 @@ const Chart9 = () => {
       choroplethEnabled = false
     }
 
-    const addLabel = (city, i, cities) => {
-      const textSize = 10
-      this.svg
-        .append('text')
-        .attr('id', cityLabel(city, i))
-        .attr('x', this.projection([city.lng, city.lat])[0])
-        .attr('y', this.projection([city.lng, city.lat])[1])
-        .attr('font-size', textSize + 'px')
-        .attr('transform', `translate(7, ${textSize / 2})`)
-        .text(city.city)
-
-      d3.select(cities[i])
-        .transition()
-        .duration(200)
-        .attr('r', '7')
-    }
-
-    const removeLabel = (city, i, cities) => {
-      d3.select('#' + cityLabel(city, i)).remove()
-      d3.select(cities[i])
-        .transition()
-        .duration(200)
-        .attr('r', '5')
-    }
-
-    d3.csv('capitals.csv').then(capitalsData => {
-      setMapBase()
+    d3.csv('cities.csv').then(cities => {
+      const citiesData = attachCities(customData, cities)
+      setMapBase(citiesData)
       const countryGroup = drawCountries()
-      drawCapitals(capitalsData)
       document.getElementById('checkbox-choropleth').addEventListener('click', (e: any) => {
         const { checked } = e.target
         if (checked) {
@@ -312,8 +358,8 @@ const Chart9 = () => {
   }
   return (
     <Layout>
-      <SEO title="Chart 9" keywords={[`gatsby`, `application`, `react`]} />
-      <h1>Interactivity in map</h1>
+      <SEO title="Chart 10" keywords={[`gatsby`, `application`, `react`]} />
+      <h1>Zooming and panning in map</h1>
       <div className="container">
         <div className="map-container" id="map-container" />
         <div className="control-panel">
@@ -327,4 +373,4 @@ const Chart9 = () => {
   )
 }
 
-export default Chart9
+export default Chart10
